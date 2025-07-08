@@ -15,6 +15,11 @@ import {
   X,
   AlertTriangle,
   Plus,
+  Building2,
+  Wrench,
+  Bell,
+  Shield,
+  UserCheck,
 } from "lucide-react";
 
 const publicNavItems = [
@@ -57,18 +62,88 @@ const adminNavItems = [
     icon: FileText,
   },
   {
+    title: "Assign Tugas",
+    href: "/admin/assign",
+    icon: UserCheck,
+  },
+  {
+    title: "Tambah Fasilitas",
+    href: "/admin/facilities/new",
+    icon: Building2,
+  },
+  {
     title: "Manajemen User",
     href: "/admin/users",
     icon: Users,
   },
 ];
 
-export function Sidebar() {
+const technicianNavItems = [
+  {
+    title: "Dashboard Teknisi",
+    href: "/technician",
+    icon: LayoutDashboard,
+  },
+  {
+    title: "Tugas Saya",
+    href: "/technician/tasks",
+    icon: Wrench,
+  },
+  {
+    title: "Laporan Selesai",
+    href: "/technician/completed",
+    icon: FileText,
+  },
+  {
+    title: "Notifikasi",
+    href: "/technician/notifications",
+    icon: Bell,
+  },
+];
+
+const governmentNavItems = [
+  {
+    title: "Dashboard Pemerintah",
+    href: "/goverment",
+    icon: LayoutDashboard,
+  },
+
+  {
+    title: "Manajemen Fasilitas",
+    href: "/goverment/facilities",
+    icon: Building2,
+  },
+];
+
+export function AppSidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
-  const { profile, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
 
-  const navItems = profile?.role === "admin" ? adminNavItems : publicNavItems;
+  const getNavItems = () => {
+    switch (profile?.role) {
+      case "admin":
+        return adminNavItems;
+      case "technician":
+        return technicianNavItems;
+      case "goverment":
+        return governmentNavItems;
+      default:
+        return publicNavItems;
+    }
+  };
+
+  const navItems = getNavItems();
+
+  const getRoleLabel = (role: string) => {
+    const labels = {
+      admin: "Administrator",
+      technician: "Teknisi",
+      goverment: "Pemerintah",
+      public: "Public User",
+    };
+    return labels[role as keyof typeof labels] || "Public User";
+  };
 
   return (
     <>
@@ -130,15 +205,16 @@ export function Sidebar() {
             <div className="flex items-center space-x-3 mb-3">
               <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
                 <span className="text-sm font-medium text-gray-700">
-                  {profile?.name?.charAt(0).toUpperCase()}
+                  {profile?.name?.charAt(0).toUpperCase() ||
+                    user?.email?.charAt(0).toUpperCase()}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">
-                  {profile?.name}
+                  {profile?.name || user?.email}
                 </p>
                 <p className="text-xs text-gray-500 truncate">
-                  {profile?.role === "admin" ? "Administrator" : "Public User"}
+                  {getRoleLabel(profile?.role || "public")}
                 </p>
               </div>
             </div>

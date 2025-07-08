@@ -1,13 +1,10 @@
 "use client";
 
-import type React from "react";
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -15,78 +12,52 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 export default function AuthPage() {
+  const [activeTab, setActiveTab] = useState("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn, signUp, user, profile, loading } = useAuth();
+
+  const { signIn, signUp } = useAuth();
+  const { toast } = useToast();
   const router = useRouter();
 
-  // Immediate redirect when user is authenticated
-  useEffect(() => {
-    if (!loading && user && profile) {
-      console.log("Redirecting immediately...", {
-        user: user.email,
-        role: profile.role,
-      });
-
-      // Try multiple redirect methods
-      const targetUrl = profile.role === "admin" ? "/admin" : "/dashboard";
-
-      // Method 1: Next.js router
-      router.push(targetUrl);
-
-      // Method 2: Fallback with window.location
-      setTimeout(() => {
-        if (window.location.pathname === "/auth") {
-          console.log("Router.push failed, using window.location");
-          window.location.href = targetUrl;
-        }
-      }, 500);
-    }
-  }, [user, profile, loading, router]);
-
-  const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setIsLoading(true);
-
-    const formData = new FormData(e.currentTarget);
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
-
     try {
       await signIn(email, password);
-      toast({
-        title: "Berhasil masuk",
-        description: "Selamat datang di FIN!",
-      });
+      // Directly navigate to the landing page after successful login
+      router.push('/');
     } catch (error: any) {
       console.error("Login error:", error);
       toast({
-        title: "Gagal masuk",
-        description: error.message || "Terjadi kesalahan saat login",
+        title: "Gagal login",
+        description: error.message || "Email atau password salah.",
         variant: "destructive",
       });
+    } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSignUp = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setIsLoading(true);
-
-    const formData = new FormData(e.currentTarget);
-    const name = formData.get("name") as string;
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
-
     try {
       await signUp(email, password, name);
       toast({
         title: "Berhasil mendaftar",
         description: "Silakan cek email untuk verifikasi akun.",
       });
+      setActiveTab("login");
     } catch (error: any) {
       console.error("Signup error:", error);
       toast({
@@ -99,141 +70,115 @@ export default function AuthPage() {
     }
   };
 
-  const handleManualRedirect = () => {
-    const targetUrl = profile?.role === "admin" ? "/admin" : "/dashboard";
-    console.log("Manual redirect to:", targetUrl);
-    window.location.href = targetUrl;
-  };
-
-  // Don't show anything if we're in the process of redirecting
-  if (!loading && user && profile) {
-    return null; // This will prevent the loading screen from showing
-  }
-
-  // Show loading if auth is loading
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="text-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Memuat...</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold">FIN</span>
-            </div>
-            <span className="text-2xl font-bold text-gray-900">Fix It Now</span>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 px-4">
+      <div className="text-center mb-8">
+        <Link href="/" className="inline-flex items-center gap-3">
+          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold text-lg">FIN</span>
           </div>
-          <CardTitle>Selamat Datang</CardTitle>
-          <CardDescription>
-            Masuk atau daftar untuk melaporkan kerusakan fasilitas umum
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Masuk</TabsTrigger>
-              <TabsTrigger value="signup">Daftar</TabsTrigger>
-            </TabsList>
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">
+            Fix It Now
+          </h1>
+        </Link>
+      </div>
 
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-md">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="login">Login</TabsTrigger>
+          <TabsTrigger value="signup">Daftar</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="login">
+          <Card>
+            <CardHeader>
+              <CardTitle>Selamat Datang Kembali</CardTitle>
+              <CardDescription>
+                Masuk ke akun Anda untuk melanjutkan.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signin-email">Email</Label>
+                  <Label htmlFor="login-email">Email</Label>
                   <Input
-                    id="signin-email"
-                    name="email"
+                    id="login-email"
                     type="email"
-                    placeholder="nama@email.com"
+                    placeholder="m@example.com"
                     required
-                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signin-password">Password</Label>
+                  <Label htmlFor="login-password">Password</Label>
                   <Input
-                    id="signin-password"
-                    name="password"
+                    id="login-password"
                     type="password"
                     required
-                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Memproses..." : "Masuk"}
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Login"}
                 </Button>
               </form>
-            </TabsContent>
-
-            <TabsContent value="signup">
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="signup">
+          <Card>
+            <CardHeader>
+              <CardTitle>Buat Akun Baru</CardTitle>
+              <CardDescription>
+                Daftar sekarang untuk mulai melaporkan dan memberi rating.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signup-name">Nama Lengkap</Label>
                   <Input
                     id="signup-name"
-                    name="name"
                     type="text"
-                    placeholder="Nama Lengkap"
+                    placeholder="John Doe"
                     required
-                    autoComplete="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">Email</Label>
                   <Input
                     id="signup-email"
-                    name="email"
                     type="email"
-                    placeholder="nama@email.com"
+                    placeholder="m@example.com"
                     required
-                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>
                   <Input
                     id="signup-password"
-                    name="password"
                     type="password"
+                    placeholder="••••••••"
                     required
-                    autoComplete="new-password"
-                    minLength={6}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Memproses..." : "Daftar"}
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Daftar"}
                 </Button>
               </form>
-            </TabsContent>
-          </Tabs>
-
-          {/* Emergency redirect button - only show if user is authenticated but still on auth page */}
-          {user && profile && (
-            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-sm text-yellow-800 mb-2">
-                Sudah login tapi belum redirect? Klik tombol di bawah:
-              </p>
-              <Button
-                onClick={handleManualRedirect}
-                className="w-full"
-                size="sm"
-              >
-                Masuk ke Dashboard
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -32,7 +32,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("Initial session:", session?.user?.email)
       setUser(session?.user ?? null)
       if (session?.user) {
         fetchOrCreateProfile(session.user)
@@ -45,8 +44,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state changed:", event, session?.user?.email)
-
       setUser(session?.user ?? null)
       if (session?.user) {
         await fetchOrCreateProfile(session.user)
@@ -61,81 +58,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchOrCreateProfile = async (user: User) => {
     try {
-      console.log("Fetching profile for user:", user.id)
-
-      // First, try to fetch existing profile
-      const { data: existingProfile, error: fetchError } = await supabase
+      // First, check if a profile already exists.
+      const { data: existingProfile, error: selectError } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
         .single()
 
-      if (existingProfile && !fetchError) {
-        console.log("Profile found:", existingProfile)
+      if (selectError && selectError.code !== "PGRST116") {
+        // PGRST116 means no rows found, which is not an error in this case.
+        throw selectError
+      }
+
+      if (existingProfile) {
+        // Profile exists, just set it.
         setProfile(existingProfile)
-        setLoading(false)
-        return
+      } else {
+        // Profile doesn't exist, create it.
+        // Note: user.email will not be null here because we are in a protected part of the logic
+        const newUserProfile = {
+          id: user.id,
+          email: user.email!,
+          name: user.user_metadata.name || user.email!, // Fallback to email if name is not available
+          role: "user", // Default role
+        }
+        const { data: newProfile, error: insertError } = await supabase
+          .from("profiles")
+          .insert(newUserProfile)
+          .select()
+          .single()
+
+        if (insertError) {
+          throw insertError
+        }
+        setProfile(newProfile)
       }
-
-      // If profile doesn't exist, create it using the function
-      console.log("Profile not found, creating new profile...")
-
-      const { data: functionResult, error: functionError } = await supabase.rpc("create_user_profile", {
-        user_id: user.id,
-        user_email: user.email!,
-        user_name: user.user_metadata?.name || null,
-      })
-
-      if (functionError) {
-        console.error("Error calling create_user_profile function:", functionError)
-        // Fallback: try direct insert
-        await createProfileDirectly(user)
-        return
-      }
-
-      if (functionResult?.error) {
-        console.error("Function returned error:", functionResult)
-        await createProfileDirectly(user)
-        return
-      }
-
-      console.log("Profile created via function:", functionResult)
-      setProfile(functionResult)
-      setLoading(false)
     } catch (error) {
-      console.error("Error in fetchOrCreateProfile:", error)
-      // Last resort: try direct creation
-      await createProfileDirectly(user)
-    }
-  }
-
-  const createProfileDirectly = async (user: User) => {
-    try {
-      const profileData = {
-        id: user.id,
-        name: user.user_metadata?.name || user.email?.split("@")[0] || "User",
-        email: user.email!,
-        role: user.email === "admin@fin.com" ? "admin" : "public",
-      }
-
-      console.log("Creating profile directly:", profileData)
-
-      const { data, error } = await supabase.from("profiles").insert([profileData]).select().single()
-
-      if (error) {
-        console.error("Error creating profile directly:", error)
-        setLoading(false)
-        return
-      }
-
-      if (data) {
-        console.log("Profile created directly:", data)
-        setProfile(data)
-      }
-
-      setLoading(false)
-    } catch (error) {
-      console.error("Error in createProfileDirectly:", error)
+      console.error("Error fetching or creating profile:", error)
+    } finally {
       setLoading(false)
     }
   }
@@ -149,16 +109,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signUp = async (email: string, password: string, name: string) => {
-    // Sign up without automatic confirmation
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          name,
+          name: name,
         },
-        // Disable email confirmation for development
-        emailRedirectTo: undefined,
       },
     })
 

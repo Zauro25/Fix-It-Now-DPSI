@@ -15,6 +15,8 @@ import {
   X,
   AlertTriangle,
   Plus,
+  Building,
+  User,
 } from "lucide-react";
 
 const publicNavItems = [
@@ -22,6 +24,11 @@ const publicNavItems = [
     title: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    title: "Daftar Fasilitas",
+    href: "/facilities",
+    icon: Building,
   },
   {
     title: "Buat Laporan",
@@ -92,20 +99,20 @@ export function Sidebar() {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-center h-16 px-4 border-b border-gray-200">
-            <div className="flex items-center space-x-2">
+             <Link href="/" className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">FIN</span>
               </div>
               <span className="text-xl font-bold text-gray-900">
                 Fix It Now
               </span>
-            </div>
+            </Link>
           </div>
 
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-2">
             {navItems.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = pathname.startsWith(item.href);
               return (
                 <Link
                   key={item.href}
@@ -126,22 +133,26 @@ export function Sidebar() {
           </nav>
 
           {/* User info and logout */}
-          <div className="p-4 border-t border-gray-200">
-            <div className="flex items-center space-x-3 mb-3">
-              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                <span className="text-sm font-medium text-gray-700">
-                  {profile?.name?.charAt(0).toUpperCase()}
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {profile?.name}
-                </p>
-                <p className="text-xs text-gray-500 truncate">
-                  {profile?.role === "admin" ? "Administrator" : "Public User"}
-                </p>
-              </div>
-            </div>
+          <div className="p-4 border-t border-gray-200 space-y-2">
+            <Link href="/account" className="w-full">
+                <Button variant="ghost" className="w-full justify-start text-gray-600 hover:text-gray-900">
+                    <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                            <span className="text-sm font-medium text-gray-700">
+                            {profile?.name?.charAt(0).toUpperCase()}
+                            </span>
+                        </div>
+                        <div className="flex-1 min-w-0 text-left">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                            {profile?.name}
+                            </p>
+                            <p className="text-xs text-gray-500 truncate">
+                            View Account
+                            </p>
+                        </div>
+                    </div>
+                </Button>
+            </Link>
             <Button
               variant="ghost"
               size="sm"
